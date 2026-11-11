@@ -1,0 +1,74 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+@import "tailwindcss";
+
+@variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --font-sans: "Inter", "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+
+  /* Custom palette overrides to align with Google AI Studio styling */
+  --color-slate-50: #f0f4f9;
+  --color-slate-100: #e3e3e3;
+  --color-slate-200: #c4c7c5;
+  --color-slate-300: #a8aaaa;
+  --color-slate-400: #8e918f;
+  --color-slate-500: #747775;
+  --color-slate-600: #5c5f5e;
+  --color-slate-700: #444746;
+  --color-slate-800: #2d2f31;
+  --color-slate-900: #1e1f20;
+  --color-slate-950: #131314;
+
+  --color-indigo-50: #e8f0fe;
+  --color-indigo-100: #d2e3fc;
+  --color-indigo-200: #a8c7fa;
+  --color-indigo-300: #7cacf8;
+  --color-indigo-400: #4285f4;
+  --color-indigo-500: #1a73e8;
+  --color-indigo-600: #1a73e8;
+  --color-indigo-700: #174ea6;
+  --color-indigo-800: #1557b0;
+  --color-indigo-900: #174ea6;
+  --color-indigo-950: #131314;
+
+  --color-blue-50: #e8f0fe;
+  --color-blue-100: #d2e3fc;
+  --color-blue-200: #a8c7fa;
+  --color-blue-300: #7cacf8;
+  --color-blue-400: #4285f4;
+  --color-blue-500: #1a73e8;
+  --color-blue-600: #1a73e8;
+  --color-blue-700: #174ea6;
+  --color-blue-800: #1557b0;
+  --color-blue-900: #174ea6;
+  --color-blue-950: #131314;
+}
+
+/* Custom scrollbars inspired by Google AI Studio */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #2d2f31;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #444746;
+}
+
+/* Gemini Spark Sparkle Gradient Text */
+.gemini-text-gradient {
+  background: linear-gradient(90deg, #4285f4, #9b72cb, #d96570);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Accent element highlights */
+.gemini-glow {
+  box-shadow: 0 0 25px rgba(66, 133, 244, 0.15);
+}

@@ -1,0 +1,143 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function isUserInHotel(hotelId) {
+      return isSignedIn() && (getUserData().hotelId == hotelId || getUserData().role == "Super Admin" || getUserData().role == "System Owner");
+    }
+
+    // User Profiles
+    match /users/{userId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && request.auth.uid == userId;
+      allow update: if isSignedIn() && (getUserData().role == "Hotel Admin" || getUserData().role == "Super Admin" || getUserData().role == "System Owner") && request.resource.data.role != "Super Admin" && request.resource.data.role != "System Owner";
+      allow delete: if isSignedIn() && (getUserData().role == "Hotel Admin" || getUserData().role == "Super Admin" || getUserData().role == "System Owner");
+    }
+
+    // Activation Keys
+    match /activationKeys/{keyId} {
+      allow read: if true;
+      allow create, delete: if isSignedIn() && (getUserData().role == "Super Admin" || getUserData().role == "System Owner");
+      allow update: if (resource.data.status == "active" && request.resource.data.status == "used")
+                   || (isSignedIn() && (getUserData().role == "Super Admin" || getUserData().role == "System Owner"));
+    }
+
+    // Hotels
+    match /hotels/{hotelId} {
+      allow read: if isSignedIn() && isUserInHotel(hotelId);
+      allow create: if isSignedIn();
+      allow update: if isSignedIn() && isUserInHotel(hotelId) && (getUserData().role == "Hotel Admin" || getUserData().role == "Super Admin" || getUserData().role == "System Owner" || getUserData().role == "Manager");
+      allow delete: if isSignedIn() && (getUserData().role == "Super Admin" || getUserData().role == "System Owner");
+    }
+
+    // Room Types
+    match /roomTypes/{roomTypeId} {
+      allow read: if isSignedIn() && isUserInHotel(resource.data.hotelId);
+      allow create: if isSignedIn() && isUserInHotel(request.resource.data.hotelId);
+      allow update: if isSignedIn() && isUserInHotel(resource.data.hotelId) && isUserInHotel(request.resource.data.hotelId);
+      allow delete: if isSignedIn() && isUserInHotel(resource.data.hotelId);
+    }
+
+    // Rooms
+    match /rooms/{roomId} {
+      allow read: if isSignedIn() && isUserInHotel(resource.data.hotelId);
+      allow create: if isSignedIn() && isUserInHotel(request.resource.data.hotelId);
+      allow update: if isSignedIn() && isUserInHotel(resource.data.hotelId) && isUserInHotel(request.resource.data.hotelId);
+      allow delete: if isSignedIn() && isUserInHotel(resource.data.hotelId);
+    }
+
+    // Guests
+    match /guests/{guestId} {
+      allow read: if isSignedIn() && isUserInHotel(resource.data.hotelId);
+      allow create: if isSignedIn() && isUserInHotel(request.resource.data.hotelId);
+      allow update: if isSignedIn() && isUserInHotel(resource.data.hotelId) && isUserInHotel(request.resource.data.hotelId);
+      allow delete: if isSignedIn() && isUserInHotel(resource.data.hotelId);
+    }
+
+    // Bookings
+    match /bookings/{bookingId} {
+      allow read: if isSignedIn() && isUserInHotel(resource.data.hotelId);
+      allow create: if isSignedIn() && isUserInHotel(request.resource.data.hotelId);
+      allow update: if isSignedIn() && isUserInHotel(resource.data.hotelId) && isUserInHotel(request.resource.data.hotelId);
+      allow delete: if isSignedIn() && isUserInHotel(resource.data.hotelId);
+    }
+
+    // Payments
+    match /payments/{paymentId} {
+      allow read: if isSignedIn() && isUserInHotel(resource.data.hotelId);
+      allow create: if isSignedIn() && isUserInHotel(request.resource.data.hotelId);
+      allow update: if isSignedIn() && isUserInHotel(resource.data.hotelId) && isUserInHotel(request.resource.data.hotelId);
+      allow delete: if isSignedIn() && isUserInHotel(resource.data.hotelId);
+    }
+
+    // Employees
+    match /employees/{employeeId} {
+      allow read: if isSignedIn() && isUserInHotel(resource.data.hotelId);
+      allow create: if isSignedIn() && isUserInHotel(request.resource.data.hotelId) && (getUserData().role == "Hotel Admin" || getUserData().role == "Super Admin" || getUserData().role == "System Owner" || getUserData().role == "Manager");
+      allow update: if isSignedIn() && isUserInHotel(resource.data.hotelId) && isUserInHotel(request.resource.data.hotelId) && (getUserData().role == "Hotel Admin" || getUserData().role == "Super Admin" || getUserData().role == "System Owner" || getUserData().role == "Manager");
+      allow delete: if isSignedIn() && isUserInHotel(resource.data.hotelId) && (getUserData().role == "Hotel Admin" || getUserData().role == "Super Admin" || getUserData().role == "System Owner" || getUserData().role == "Manager");
+    }
+
+    // Suppliers
+    match /suppliers/{supplierId} {
+      allow read: if isSignedIn() && isUserInHotel(resource.data.hotelId);
+      allow create: if isSignedIn() && isUserInHotel(request.resource.data.hotelId);
+      allow update: if isSignedIn() && isUserInHotel(resource.data.hotelId) && isUserInHotel(request.resource.data.hotelId);
+      allow delete: if isSignedIn() && isUserInHotel(resource.data.hotelId);
+    }
+
+    // Inventory
+    match /inventory/{inventoryId} {
+      allow read: if isSignedIn() && isUserInHotel(resource.data.hotelId);
+      allow create: if isSignedIn() && isUserInHotel(request.resource.data.hotelId);
+      allow update: if isSignedIn() && isUserInHotel(resource.data.hotelId) && isUserInHotel(request.resource.data.hotelId);
+      allow delete: if isSignedIn() && isUserInHotel(resource.data.hotelId);
+    }
+
+    // Restaurant Orders
+    match /restaurantOrders/{orderId} {
+      allow read: if isSignedIn() && isUserInHotel(resource.data.hotelId);
+      allow create: if isSignedIn() && isUserInHotel(request.resource.data.hotelId);
+      allow update: if isSignedIn() && isUserInHotel(resource.data.hotelId) && isUserInHotel(request.resource.data.hotelId);
+      allow delete: if isSignedIn() && isUserInHotel(resource.data.hotelId);
+    }
+
+    // Expenses
+    match /expenses/{expenseId} {
+      allow read: if isSignedIn() && isUserInHotel(resource.data.hotelId);
+      allow create: if isSignedIn() && isUserInHotel(request.resource.data.hotelId);
+      allow update: if isSignedIn() && isUserInHotel(resource.data.hotelId) && isUserInHotel(request.resource.data.hotelId);
+      allow delete: if isSignedIn() && isUserInHotel(resource.data.hotelId);
+    }
+
+    // Income
+    match /income/{incomeId} {
+      allow read: if isSignedIn() && isUserInHotel(resource.data.hotelId);
+      allow create: if isSignedIn() && isUserInHotel(request.resource.data.hotelId);
+      allow update: if isSignedIn() && isUserInHotel(resource.data.hotelId) && isUserInHotel(request.resource.data.hotelId);
+      allow delete: if isSignedIn() && isUserInHotel(resource.data.hotelId);
+    }
+
+    // Notifications
+    match /notifications/{notificationId} {
+      allow read: if isSignedIn() && isUserInHotel(resource.data.hotelId);
+      allow create: if isSignedIn() && isUserInHotel(request.resource.data.hotelId);
+      allow update: if isSignedIn() && isUserInHotel(resource.data.hotelId) && isUserInHotel(request.resource.data.hotelId);
+      allow delete: if isSignedIn() && isUserInHotel(resource.data.hotelId);
+    }
+  }
+}

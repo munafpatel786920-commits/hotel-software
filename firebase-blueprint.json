@@ -1,0 +1,263 @@
+{
+  "entities": {
+    "hotel": {
+      "title": "Hotel",
+      "description": "Hotel information, profile details, and regional settings",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "country": { "type": "string" },
+        "currency": { "type": "string" },
+        "language": { "type": "string" },
+        "timezone": { "type": "string" },
+        "address": { "type": "string" },
+        "taxNumber": { "type": "string" },
+        "phone": { "type": "string" },
+        "email": { "type": "string" },
+        "logo": { "type": "string" }
+      },
+      "required": ["name", "country", "currency", "language", "timezone", "address", "phone", "email"]
+    },
+    "user": {
+      "title": "User",
+      "description": "Hotel user or employee record for role-based authentication",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "name": { "type": "string" },
+        "email": { "type": "string" },
+        "role": { "type": "string", "enum": ["Super Admin", "Hotel Admin", "Manager", "Receptionist", "Accountant", "Housekeeping Staff"] },
+        "hotelId": { "type": "string" }
+      },
+      "required": ["uid", "name", "email", "role", "hotelId"]
+    },
+    "roomType": {
+      "title": "Room Type",
+      "description": "Room types/categories offered by the hotel",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "basePrice": { "type": "number" },
+        "amenities": { "type": "array" },
+        "capacity": { "type": "number" },
+        "hotelId": { "type": "string" }
+      },
+      "required": ["name", "basePrice", "amenities", "capacity", "hotelId"]
+    },
+    "room": {
+      "title": "Room",
+      "description": "Individual hotel rooms and their real-time statuses",
+      "type": "object",
+      "properties": {
+        "roomNumber": { "type": "string" },
+        "floor": { "type": "string" },
+        "roomTypeId": { "type": "string" },
+        "status": { "type": "string", "enum": ["Available", "Occupied", "Reserved", "Cleaning", "Maintenance", "Out of Service"] },
+        "hotelId": { "type": "string" }
+      },
+      "required": ["roomNumber", "floor", "roomTypeId", "status", "hotelId"]
+    },
+    "guest": {
+      "title": "Guest",
+      "description": "Guest personal files and registration info",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "email": { "type": "string" },
+        "phone": { "type": "string" },
+        "nationality": { "type": "string" },
+        "idType": { "type": "string" },
+        "idNumber": { "type": "string" },
+        "idImage": { "type": "string" },
+        "hotelId": { "type": "string" }
+      },
+      "required": ["name", "phone", "nationality", "idType", "idNumber", "hotelId"]
+    },
+    "booking": {
+      "title": "Booking",
+      "description": "Reservations and bookings for hotel stays",
+      "type": "object",
+      "properties": {
+        "guestId": { "type": "string" },
+        "roomTypeId": { "type": "string" },
+        "roomId": { "type": "string" },
+        "checkInDate": { "type": "string" },
+        "checkOutDate": { "type": "string" },
+        "status": { "type": "string", "enum": ["Reserved", "Checked In", "Checked Out", "Cancelled"] },
+        "totalAmount": { "type": "number" },
+        "paidAmount": { "type": "number" },
+        "hotelId": { "type": "string" }
+      },
+      "required": ["guestId", "roomTypeId", "checkInDate", "checkOutDate", "status", "totalAmount", "paidAmount", "hotelId"]
+    },
+    "payment": {
+      "title": "Payment",
+      "description": "Transaction records for guest bills and invoices",
+      "type": "object",
+      "properties": {
+        "bookingId": { "type": "string" },
+        "amount": { "type": "number" },
+        "paymentMethod": { "type": "string", "enum": ["Cash", "Card", "Bank Transfer", "Online"] },
+        "paymentDate": { "type": "string" },
+        "category": { "type": "string", "enum": ["Room Charges", "Food Charges", "Laundry", "Mini Bar", "Extra Charges"] },
+        "hotelId": { "type": "string" }
+      },
+      "required": ["bookingId", "amount", "paymentMethod", "paymentDate", "category", "hotelId"]
+    },
+    "employee": {
+      "title": "Employee",
+      "description": "Hotel staff and employee metadata",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "email": { "type": "string" },
+        "phone": { "type": "string" },
+        "role": { "type": "string" },
+        "salary": { "type": "number" },
+        "department": { "type": "string" },
+        "attendance": { "type": "object" },
+        "hotelId": { "type": "string" }
+      },
+      "required": ["name", "email", "role", "salary", "department", "hotelId"]
+    },
+    "supplier": {
+      "title": "Supplier",
+      "description": "Suppliers of inventory and products",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "contactName": { "type": "string" },
+        "phone": { "type": "string" },
+        "email": { "type": "string" },
+        "hotelId": { "type": "string" }
+      },
+      "required": ["name", "phone", "hotelId"]
+    },
+    "inventory": {
+      "title": "Inventory",
+      "description": "Stock inventory items, supplier references, and low stock warnings",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "quantity": { "type": "number" },
+        "minQuantity": { "type": "number" },
+        "category": { "type": "string" },
+        "supplierId": { "type": "string" },
+        "hotelId": { "type": "string" }
+      },
+      "required": ["name", "quantity", "minQuantity", "category", "supplierId", "hotelId"]
+    },
+    "restaurantOrder": {
+      "title": "Restaurant Order",
+      "description": "Orders made at the restaurant or via room service",
+      "type": "object",
+      "properties": {
+        "roomId": { "type": "string" },
+        "items": { "type": "array" },
+        "totalAmount": { "type": "number" },
+        "status": { "type": "string", "enum": ["Pending", "Completed", "Cancelled"] },
+        "orderType": { "type": "string", "enum": ["Table Order", "Room Service"] },
+        "hotelId": { "type": "string" }
+      },
+      "required": ["roomId", "items", "totalAmount", "status", "orderType", "hotelId"]
+    },
+    "expense": {
+      "title": "Expense",
+      "description": "Hotel expenses",
+      "type": "object",
+      "properties": {
+        "category": { "type": "string" },
+        "amount": { "type": "number" },
+        "date": { "type": "string" },
+        "description": { "type": "string" },
+        "hotelId": { "type": "string" }
+      },
+      "required": ["category", "amount", "date", "description", "hotelId"]
+    },
+    "income": {
+      "title": "Income",
+      "description": "Other sources of income for the hotel",
+      "type": "object",
+      "properties": {
+        "category": { "type": "string" },
+        "amount": { "type": "number" },
+        "date": { "type": "string" },
+        "description": { "type": "string" },
+        "hotelId": { "type": "string" }
+      },
+      "required": ["category", "amount", "date", "description", "hotelId"]
+    },
+    "notification": {
+      "title": "Notification",
+      "description": "Internal messages, alerts, and system notifications",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "message": { "type": "string" },
+        "isRead": { "type": "boolean" },
+        "createdAt": { "type": "string" },
+        "type": { "type": "string" },
+        "hotelId": { "type": "string" }
+      },
+      "required": ["title", "message", "isRead", "createdAt", "type", "hotelId"]
+    }
+  },
+  "firestore": {
+    "/hotels/{hotelId}": {
+      "schema": "hotel",
+      "description": "Registered hotels"
+    },
+    "/users/{userId}": {
+      "schema": "user",
+      "description": "Authorized staff and users"
+    },
+    "/roomTypes/{roomTypeId}": {
+      "schema": "roomType",
+      "description": "Configured room types"
+    },
+    "/rooms/{roomId}": {
+      "schema": "room",
+      "description": "Individual hotel rooms"
+    },
+    "/guests/{guestId}": {
+      "schema": "guest",
+      "description": "Registered guests"
+    },
+    "/bookings/{bookingId}": {
+      "schema": "booking",
+      "description": "Bookings and reservations"
+    },
+    "/payments/{paymentId}": {
+      "schema": "payment",
+      "description": "Transaction and bill payments"
+    },
+    "/employees/{employeeId}": {
+      "schema": "employee",
+      "description": "Employee profiles"
+    },
+    "/suppliers/{supplierId}": {
+      "schema": "supplier",
+      "description": "Suppliers database"
+    },
+    "/inventory/{inventoryId}": {
+      "schema": "inventory",
+      "description": "Inventory stock tracker"
+    },
+    "/restaurantOrders/{orderId}": {
+      "schema": "restaurantOrder",
+      "description": "Restaurant and room service orders"
+    },
+    "/expenses/{expenseId}": {
+      "schema": "expense",
+      "description": "Hotel expense entries"
+    },
+    "/income/{incomeId}": {
+      "schema": "income",
+      "description": "Other income records"
+    },
+    "/notifications/{notificationId}": {
+      "schema": "notification",
+      "description": "Staff alerts and logs"
+    }
+  }
+}

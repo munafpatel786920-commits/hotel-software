@@ -1,0 +1,6 @@
+{
+  "name": "Hotel Management System",
+  "description": "A modern, professional, cloud-based Hotel Management ERP featuring multi-country support, real-time Firestore synchronization, role-based access control, restaurant billing, housekeeping registers, stock inventories, and comprehensive P&L financial statements.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
