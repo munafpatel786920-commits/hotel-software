@@ -377,9 +377,14 @@ async function setupViteDev() {
   }
 }
 
-setupViteDev().then(() => {
-  const PORT = process.env.PORT || 3000;
-  app.listen(PORT, () => {
-    console.log(`[Express Backend] HMS Server running on port ${PORT}`);
+if (!process.env.VERCEL) {
+  setupViteDev().then(() => {
+    const PORT = process.env.PORT || 3000;
+    app.listen(PORT, () => {
+      console.log(`[Express Backend] HMS Server running on port ${PORT}`);
+    });
   });
-});
+}
+
+export default app;
+

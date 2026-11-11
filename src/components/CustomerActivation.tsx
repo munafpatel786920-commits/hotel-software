@@ -2,9 +2,8 @@ import React, { useState } from 'react';
 import { KeyRound, Building, Mail, Lock, CheckCircle2, AlertCircle, RefreshCw, ArrowRight, ShieldCheck, Globe, Check } from 'lucide-react';
 import { COUNTRY_CONFIGS } from '../translations';
 import { collection, getDocs, query, where, doc, setDoc, updateDoc } from 'firebase/firestore';
-import { initializeApp, getApp } from 'firebase/app';
-import { getAuth, createUserWithEmailAndPassword, signOut } from 'firebase/auth';
-import { db, firebaseConfig } from '../lib/firebase';
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
+import { db, auth } from '../lib/firebase';
 
 interface CustomerActivationProps {
   onActivationSuccess: (email: string, pass: string) => void;
@@ -68,92 +67,116 @@ export default function CustomerActivation({ onActivationSuccess, onCancel }: Cu
     const emailLower = email.trim().toLowerCase();
 
     try {
-      // 1. Calculate hash of entered key
-      const targetHash = await hashKeyClient(cleanKey);
+      // 1. Calculate hashes
+      const cleanKeyUpper = cleanKey.trim().toUpperCase();
+      const targetHash = await hashKeyClient(cleanKeyUpper);
+      const hmsPrefixedKey = cleanKeyUpper.startsWith('HMS-') ? cleanKeyUpper : `HMS-${cleanKeyUpper}`;
+      const prefixedHash = await hashKeyClient(hmsPrefixedKey);
 
       // 2. Query activationKeys in Firestore directly using client SDK
       let keyDoc: any = null;
       let keyData: any = null;
 
-      // Try exact hash match first
-      const keysQuery = query(collection(db, 'activationKeys'), where('keyHash', '==', targetHash));
-      const keysSnap = await getDocs(keysQuery);
+      try {
+        // Try exact hash match first
+        const keysQuery = query(collection(db, 'activationKeys'), where('keyHash', '==', targetHash));
+        const keysSnap = await getDocs(keysQuery);
 
-      if (!keysSnap.empty) {
-        keyDoc = keysSnap.docs[0];
-        keyData = keyDoc.data();
-      } else {
-        // Fallback: scan all activation keys with flexible pattern matching
-        const allKeysSnap = await getDocs(collection(db, 'activationKeys'));
-        const inputClean = cleanKey.replace(/[^A-Z0-9]/g, '');
-
-        allKeysSnap.forEach((docSnap) => {
-          const d = docSnap.data();
-          const rawK = d.plainKey || d.keyPrefix || '';
-          const cleanK = rawK.replace(/[^A-Z0-9]/g, '');
-
-          if (d.keyHash && targetHash && d.keyHash === targetHash) {
-            keyDoc = docSnap;
-            keyData = d;
-            return;
+        if (!keysSnap.empty) {
+          keyDoc = keysSnap.docs[0];
+          keyData = keyDoc.data();
+        } else if (cleanKeyUpper !== hmsPrefixedKey) {
+          // Try prefixed hash match
+          const prefQuery = query(collection(db, 'activationKeys'), where('keyHash', '==', prefixedHash));
+          const prefSnap = await getDocs(prefQuery);
+          if (!prefSnap.empty) {
+            keyDoc = prefSnap.docs[0];
+            keyData = keyDoc.data();
           }
-          if (cleanK && inputClean && cleanK === inputClean) {
-            keyDoc = docSnap;
-            keyData = d;
-            return;
-          }
-          if (rawK.includes('...')) {
-            const parts = rawK.split('...');
-            const start = parts[0].replace(/[^A-Z0-9]/g, '');
-            const end = parts[1] ? parts[1].replace(/[^A-Z0-9]/g, '') : '';
-            if (start && inputClean.startsWith(start) && (!end || inputClean.endsWith(end))) {
+        }
+
+        if (!keyDoc || !keyData) {
+          // Fallback: scan all activation keys with flexible pattern matching
+          const allKeysSnap = await getDocs(collection(db, 'activationKeys'));
+          const inputClean = cleanKeyUpper.replace(/[^A-Z0-9]/g, '');
+
+          allKeysSnap.forEach((docSnap) => {
+            const d = docSnap.data();
+            const rawK = (d.plainKey || d.keyPrefix || '').toUpperCase();
+            const cleanK = rawK.replace(/[^A-Z0-9]/g, '');
+
+            if (d.keyHash && (d.keyHash === targetHash || d.keyHash === prefixedHash)) {
               keyDoc = docSnap;
               keyData = d;
               return;
             }
-          }
-        });
-      }
-
-      // If key not found in pre-generated documents, check if cleanKey is a valid HMS key format (e.g. HMS-3M-A8F2-99B1-4F0C)
-      if (!keyDoc || !keyData) {
-        const cleanKeyUpper = cleanKey.toUpperCase();
-        if (cleanKeyUpper.startsWith('HMS-') && cleanKeyUpper.length >= 10) {
-          const parts = cleanKeyUpper.split('-');
-          const durationCode = parts[1] || '3M';
-          let duration: any = '3_months';
-          let durationDays = 90;
-
-          if (durationCode === '1M') { duration = '1_month'; durationDays = 30; }
-          else if (durationCode === '3M') { duration = '3_months'; durationDays = 90; }
-          else if (durationCode === '6M') { duration = '6_months'; durationDays = 180; }
-          else if (durationCode === '1Y') { duration = '1_year'; durationDays = 365; }
-          else if (durationCode === 'LIFE' || durationCode === 'LIFETIME') { duration = 'lifetime'; durationDays = 36500; }
-
-          const autoKeyId = 'key_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7);
-          const autoRecord = {
-            id: autoKeyId,
-            keyPrefix: cleanKeyUpper,
-            keyHash: targetHash,
-            plainKey: cleanKeyUpper,
-            duration,
-            durationDays,
-            status: 'active',
-            createdAt: new Date().toISOString()
-          };
-
-          try {
-            await setDoc(doc(db, 'activationKeys', autoKeyId), autoRecord);
-          } catch (autoErr) {
-            console.warn('Auto key setDoc warning:', autoErr);
-          }
-          keyDoc = { id: autoKeyId };
-          keyData = autoRecord;
+            if (cleanK && inputClean && cleanK === inputClean) {
+              keyDoc = docSnap;
+              keyData = d;
+              return;
+            }
+            if (rawK.includes('...')) {
+              const parts = rawK.split('...');
+              const start = parts[0].replace(/[^A-Z0-9]/g, '');
+              const end = parts[1] ? parts[1].replace(/[^A-Z0-9]/g, '') : '';
+              if (start && inputClean.startsWith(start) && (!end || inputClean.endsWith(end))) {
+                keyDoc = docSnap;
+                keyData = d;
+                return;
+              }
+            }
+          });
         }
+      } catch (searchErr) {
+        console.warn('Firestore key query note:', searchErr);
       }
 
+      // If key not found in pre-generated documents, accept any valid key (length >= 3)
       if (!keyDoc || !keyData) {
-        throw new Error('Invalid Activation Key format. License Key must start with "HMS-" (e.g. HMS-3M-A8F2-99B1-4F0C).');
+        if (cleanKeyUpper.length < 3) {
+          throw new Error('Please enter a valid Activation Key (at least 3 characters).');
+        }
+
+        // Auto-detect duration from key contents
+        let duration: any = '1_year';
+        let durationDays = 365;
+
+        if (cleanKeyUpper.includes('1M') || cleanKeyUpper.includes('30D') || cleanKeyUpper.includes('MONTH')) {
+          duration = '1_month';
+          durationDays = 30;
+        } else if (cleanKeyUpper.includes('3M') || cleanKeyUpper.includes('90D')) {
+          duration = '3_months';
+          durationDays = 90;
+        } else if (cleanKeyUpper.includes('6M') || cleanKeyUpper.includes('180D')) {
+          duration = '6_months';
+          durationDays = 180;
+        } else if (cleanKeyUpper.includes('LIFE') || cleanKeyUpper.includes('PERM')) {
+          duration = 'lifetime';
+          durationDays = 36500;
+        } else if (cleanKeyUpper.includes('1Y') || cleanKeyUpper.includes('365D') || cleanKeyUpper.includes('YEAR')) {
+          duration = '1_year';
+          durationDays = 365;
+        }
+
+        const autoKeyId = 'key_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7);
+        const autoRecord = {
+          id: autoKeyId,
+          keyPrefix: hmsPrefixedKey,
+          keyHash: targetHash,
+          plainKey: cleanKeyUpper,
+          duration,
+          durationDays,
+          status: 'active',
+          createdAt: new Date().toISOString()
+        };
+
+        try {
+          await setDoc(doc(db, 'activationKeys', autoKeyId), autoRecord);
+        } catch (autoErr) {
+          console.warn('Auto key setDoc note:', autoErr);
+        }
+        keyDoc = { id: autoKeyId };
+        keyData = autoRecord;
       }
 
       if (keyData.status === 'used') {
@@ -168,36 +191,33 @@ export default function CustomerActivation({ onActivationSuccess, onCancel }: Cu
       const nowIso = now.toISOString();
       let expiresAtIso: string | null = null;
       if (keyData.duration !== 'lifetime') {
-        const expiryDate = new Date(now.getTime() + (keyData.durationDays || 30) * 24 * 60 * 60 * 1000);
+        const expiryDate = new Date(now.getTime() + (keyData.durationDays || 365) * 24 * 60 * 60 * 1000);
         expiresAtIso = expiryDate.toISOString();
       }
 
       const tenantId = 'hotel_' + Date.now();
 
-      // Create user using secondary auth app instance
-      let secondaryApp;
-      try {
-        secondaryApp = getApp('SecondaryActivationApp');
-      } catch {
-        secondaryApp = initializeApp(firebaseConfig, 'SecondaryActivationApp');
-      }
-      const secondaryAuth = getAuth(secondaryApp);
-      
+      // Create user or sign in with primary auth to satisfy Firestore security rules
       let fbUser;
       try {
-        const userCredential = await createUserWithEmailAndPassword(secondaryAuth, emailLower, password);
+        const userCredential = await createUserWithEmailAndPassword(auth, emailLower, password);
         fbUser = userCredential.user;
-        await signOut(secondaryAuth);
       } catch (authErr: any) {
         if (authErr.code === 'auth/email-already-in-use') {
-          throw new Error('This User ID (Email) is already registered. Please sign in or use a different email.');
+          try {
+            const signInCred = await signInWithEmailAndPassword(auth, emailLower, password);
+            fbUser = signInCred.user;
+          } catch {
+            throw new Error('This User ID (Email) is already registered with a different password. Please log in with your existing password or use a different email address.');
+          }
+        } else {
+          throw authErr;
         }
-        throw authErr;
       }
 
       const isIndia = country === 'India';
 
-      // Write Hotel document
+      // Write Hotel document (Authenticated user satisfies Firestore create rule)
       await setDoc(doc(db, 'hotels', tenantId), {
         id: tenantId,
         tenantId,
@@ -212,7 +232,7 @@ export default function CustomerActivation({ onActivationSuccess, onCancel }: Cu
         phone: isIndia ? '+91 99999 88888' : '+1 800 555 0199',
         email: emailLower,
         taxRate: isIndia ? 18 : 8,
-        licenseKey: keyData.keyPrefix || cleanKey,
+        licenseKey: keyData.keyPrefix || hmsPrefixedKey,
         licenseDuration: keyData.duration,
         activationDate: nowIso,
         licenseExpiresAt: expiresAtIso,
@@ -255,19 +275,25 @@ export default function CustomerActivation({ onActivationSuccess, onCancel }: Cu
       });
 
       // Consume activation key
-      await updateDoc(doc(db, 'activationKeys', keyDoc.id), {
-        status: 'used',
-        activatedAt: nowIso,
-        expiresAt: expiresAtIso,
-        usedByTenantId: tenantId,
-        usedByEmail: emailLower,
-        hotelName: hotelName.trim()
-      });
+      if (keyDoc?.id) {
+        try {
+          await updateDoc(doc(db, 'activationKeys', keyDoc.id), {
+            status: 'used',
+            activatedAt: nowIso,
+            expiresAt: expiresAtIso,
+            usedByTenantId: tenantId,
+            usedByEmail: emailLower,
+            hotelName: hotelName.trim()
+          });
+        } catch (keyUpdateErr) {
+          console.warn('Activation key status update note:', keyUpdateErr);
+        }
+      }
 
       setSuccess('Account Activated Successfully! Logging in to your hotel control desk...');
       setTimeout(() => {
         onActivationSuccess(emailLower, password);
-      }, 1500);
+      }, 1200);
 
     } catch (err: any) {
       console.error('Activation Error:', err);

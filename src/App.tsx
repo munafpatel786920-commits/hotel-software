@@ -551,6 +551,8 @@ export default function App() {
         setUser(null);
         setUserProfile(null);
         setHotel(null);
+        setEmail('');
+        setPassword('');
       }
       setAuthLoading(false);
     }, (err: any) => {
@@ -921,6 +923,8 @@ export default function App() {
               setHotel(defaultHotel);
               setIsPendingApproval(false);
               setCurrentTab('superadmin');
+              setEmail('');
+              setPassword('');
               setIsSubmitting(false);
               return;
             } catch (systemErr: any) {
@@ -931,6 +935,8 @@ export default function App() {
         }
       } else {
         await signInWithEmailAndPassword(auth, email.trim(), password);
+        setEmail('');
+        setPassword('');
       }
     } catch (err: any) {
       const isConfigIssue =
@@ -1219,6 +1225,9 @@ export default function App() {
 
   const handleLogout = async () => {
     try {
+      setEmail('');
+      setPassword('');
+      setAuthError(null);
       if (isLocalMode) {
         localStorage.removeItem('pms_local_mode');
         localStorage.removeItem('pms_local_user');
@@ -1659,6 +1668,9 @@ export default function App() {
             <button
               onClick={() => {
                 signOut(auth);
+                setEmail('');
+                setPassword('');
+                setAuthError(null);
                 setIsPendingApproval(false);
               }}
               className="w-full py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-xl text-xs font-bold transition-all border border-slate-700/60 cursor-pointer"
@@ -1863,7 +1875,7 @@ export default function App() {
                   )}
 
                   {/* Form */}
-                  <form onSubmit={handleLogin} className="space-y-4">
+                  <form onSubmit={handleLogin} className="space-y-4" autoComplete="off">
                     <div className="space-y-1.5">
                       <label className="text-[10px] uppercase font-bold text-slate-500 tracking-wider block">User ID (Email Address)</label>
                       <div className="relative">
@@ -1871,6 +1883,7 @@ export default function App() {
                         <input
                           type="email"
                           required
+                          autoComplete="off"
                           placeholder="e.g. admin@grandhotel.com"
                           value={email}
                           onChange={(e) => setEmail(e.target.value)}
@@ -1886,6 +1899,7 @@ export default function App() {
                         <input
                           type="password"
                           required
+                          autoComplete="new-password"
                           placeholder="Enter security password"
                           value={password}
                           onChange={(e) => setPassword(e.target.value)}
